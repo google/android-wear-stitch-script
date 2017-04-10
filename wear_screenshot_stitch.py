@@ -14,19 +14,7 @@
 # limitations under the License.
 """A tool that takes Wear screenshots using adb and stitches them together.
 
-Detailed usage:
-
-./wear_screenshot_stitch.py [--square] [--transparency] [--adb-args ...]
-
-    --square                assume device has a square screen
-                            (otherwise a circular screen will be assumed)
-
-    --transparency          use alpha transparency for pixels around the corners
-                            of the output that the circular screen chops off
-
-    --adb-args              any arguments following this will passed to
-                            adb directly
-
+See README for instructions.
 """
 
 import hashlib

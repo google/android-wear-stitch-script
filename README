@@ -1,0 +1,24 @@
+This is not an official Google product.
+
+This script generates stitched-together screenshots of Android Wear UIs that
+are too tall to fit on the screen all at once. It does by taking a screenshot,
+scrolling a bit, taking another screenshot etc. until it reaches the bottom
+of the screen. It then does some image processing to merge the screenshots
+that were taken.
+
+This works with real devices and with emulated watches.
+
+Usage:
+
+./wear_screenshot_stitch.py [--square] [--transparency] [--adb-args ...]
+
+    --square                assume device has a square screen
+                            (otherwise a circular screen will be assumed)
+
+    --transparency          use alpha transparency for pixels around the corners
+                            of the output that the circular screen chops off
+
+    --adb-args              any arguments following this will passed to
+                            adb directly
+
+
