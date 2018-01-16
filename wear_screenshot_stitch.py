@@ -40,7 +40,7 @@ ENDC = "\033[0m"
 def adb(adb_args, command):
   """Runs an adb command, discarding the result."""
   cmd = "adb {} {}".format(adb_args, command)
-  print "Executing adb command: " + cmd
+  print ("Executing adb command: " + cmd)
   subprocess.call(cmd, shell=True)
 
 
@@ -94,12 +94,12 @@ def main(skip_capture, circular, transparency, adb_args=""):
     # at the bottom of the UI) or we hit the iteration limit.
     old_md5sum = ""
     for i in range(image_count):
-      print "Capturing image {}".format(i)
+      print ("Capturing image {}".format(i))
       adb(adb_args, "shell screencap -p /sdcard/{}.png".format(i))
       adb(adb_args, "shell input swipe 50 200 50 100")
       adb(adb_args, "pull /sdcard/{}.png screencaps/".format(i))
       if not os.path.exists("screencaps/{}.png".format(i)):
-        print FAIL + "Failed to capture screenshot. Is your device connected?" + ENDC
+        print (FAIL + "Failed to capture screenshot. Is your device connected?" + ENDC)
         return
 
       md5sum = hashlib.md5(
@@ -131,7 +131,7 @@ def main(skip_capture, circular, transparency, adb_args=""):
         z for z in range(0, height - offset)
         if row_hashes[z] == previous_row_hashes[z + offset]
     ]), offset) for offset in range(0, height)])
-    print "Match for image {} - ({}, {})".format(i, best_score, best_offset)
+    print ("Match for image {} - ({}, {})".format(i, best_score, best_offset))
 
     absolute_offset += best_offset
     for y in range(height):
@@ -184,7 +184,7 @@ def main(skip_capture, circular, transparency, adb_args=""):
   # And we're done! Let the user know where to find the output image.
   output_filename = "screencaps/output.png"
   im_out.save(output_filename)
-  print "\n" + OKBLUE + "Wrote {}".format(output_filename) + ENDC
+  print ("\n" + OKBLUE + "Wrote {}".format(output_filename) + ENDC)
 
 
 if __name__ == "__main__":
