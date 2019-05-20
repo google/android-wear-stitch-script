@@ -29,6 +29,7 @@ import subprocess
 import sys
 import time
 import argparse
+import re
 
 from collections import defaultdict
 from PIL import Image
@@ -46,7 +47,7 @@ def adb(adb_args, command):
   """Runs an adb command, discarding the result."""
   cmd = "adb {} {}".format(adb_args, command)
   print("Executing adb command: " + cmd)
-  subprocess.call(cmd, shell=True)
+  return subprocess.check_output(cmd, shell=True)
 
 
 def rgb_to_int(x):
@@ -131,6 +132,37 @@ def setup_files(out_dir, prefix, name, capture, max_captures):
 def get_capture_file_path(path, prefix, max, num):
   return '{}{}.png'.format(os.path.join(path, prefix), padded_index(max, num))
 
+def get_screen_size(args):
+  """Get screen size by read output of 'shell dumpsys window displays'
+
+  output is like this:
+
+  WINDOW MANAGER DISPLAY CONTENTS (dumpsys window displays)
+  Display: mDisplayId=0
+    init=400x400 280dpi cur=400x400 app=400x400 rng=400x400-400x400
+    deferred=false mLayoutNeeded=false mTouchExcludeRegion=SkRegion((0,0,400,400))
+  """
+
+  pattern_display = re.compile(r".*Display:.*")
+  pattern_size = re.compile(r".*cur=(?P<w>\d+)x(?P<d>\d+).*")
+
+  output = adb(args.adb_args, "shell dumpsys window displays")
+  in_display_section = False
+
+  for line in output.split(os.linesep):
+    if pattern_display.match(line):
+      in_display_section = True
+      continue
+
+    if in_display_section:
+      matched = pattern_size.match(line)
+      if matched:
+        w = matched.group('w')
+        d = matched.group('d')
+        return (float(w), float(d))
+
+  return (0, 0)
+
 def rm_captures(path, prefix):
   subprocess.call("rm {}*.png".format(os.path.join(path, prefix)), shell=True)
 
@@ -148,12 +180,19 @@ def main(args):
     # Stop when we get two identical screenshots in a row (this indicates that we're
     # at the bottom of the UI) or we hit the iteration limit.
     old_md5sum = ""
+    (sw, sh) = get_screen_size(args)
+    if sw == 0 or sh == 0:
+      print(FAIL + "Failed to get scree size. Is your device connected?" + ENDC)
+      return
+    (swipe_x, swipe_start) = (sw / 2, sh / 2)
+    swipe_end = max(swipe_start - sh / 4, 0)
+    print("Got screen size {}x{}, swipe from {} to {}".format(sw, sh, swipe_start, swipe_end))
     for i in range(image_count):
       index = padded_index(args.max_captures, i)
       cap_file = get_capture_file_path(cap_dir, cap_file_prefix, args.max_captures, i)
       print("Capturing image {}".format(i))
       adb(args.adb_args, "shell screencap -p /sdcard/{}.png".format(index))
-      adb(args.adb_args, "shell input swipe 50 200 50 100")
+      adb(args.adb_args, "shell input swipe {} {} {} {}".format(swipe_x, swipe_start, swipe_x, swipe_end))
       adb(args.adb_args, "pull /sdcard/{}.png {}".format(index, cap_file))
       if not os.path.exists(cap_file):
         print(FAIL + "Failed to capture screenshot. Is your device connected?" + ENDC)
@@ -201,7 +240,7 @@ def main(args):
   # Create an output image by overlaying each of the images captured at the
   # offsets we worked out earlier.
   output_height = max(rows_for_absolute.keys()) + 1
-  print("Producting an image with height {}".format(output_height))
+  print("Producting an image with size {}x{}".format(width, output_height))
   im_out = Image.new("RGBA", (width, output_height))
   middle = (height - 1) / 2
   for y in range(output_height):
